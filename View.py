@@ -5,6 +5,8 @@ from PIL import Image,ImageTk
 import cv2
 import Video
 
+
+
 class Application(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
