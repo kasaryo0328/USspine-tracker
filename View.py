@@ -2,8 +2,8 @@ import tkinter as tk            # ウィンドウ作成用
 from tkinter import filedialog  # ファイルを開くダイアログ用
 import os
 from PIL import Image,ImageTk
-import cv2
 import Video
+import cv2
 
 
 
@@ -66,6 +66,7 @@ class Application(tk.Frame):
     #       widget生成
     # -------------------------------------------------------------------------------  
     def create_widgets(self):
+        print("make widget")
     
     
     def set_video(self, filename):
@@ -105,6 +106,7 @@ class Sub_Window1(tk.Frame):
         self.pack()
     
     def create_widgets(self):
+        print("make widget")
 
     def quit_window(self):
         self.master.destroy()

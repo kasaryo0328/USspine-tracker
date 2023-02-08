@@ -4,4 +4,5 @@ import ROI
 
 class Trim:
     def __init__(self):
+        print("i'll make trimming code ")
         
