@@ -26,6 +26,8 @@ class MainWindow(tk.Frame):
         self.create_menu()   # メニューの作成
         self.create_widget() # ウィジェットの作成
         
+        self.new_window()
+        
         
     # -------------------------------------------------------------------------------
     # メニューイベント
@@ -181,6 +183,21 @@ class MainWindow(tk.Frame):
         #self.image_info["text"] = f"{self.pil_image.format} : {self.pil_image.width} x {self.pil_image.height} {self.pil_image.mode}"
         # カレントディレクトリの設定
         os.chdir(os.path.dirname(filename))
+        
+    def next_frame(self):
+
+        # PillowからNumPy(OpenCVの画像)へ変換
+        self.cv_image = self.video.read_frame()
+        self.pil_image = Image.fromarray(self.cv_image)
+        self.master.geometry('{}x{}'.format(self.pil_image.width,self.pil_image.height))
+        self.canvas.pack(expand=True,  fill=tk.BOTH)
+        #cv2.imshow("test",self.cv_image)
+
+        # 画像全体に表示するようにアフィン変換行列を設定
+        self.zoom_fit(self.pil_image.width, self.pil_image.height)
+        
+        # 画像の表示
+        self.draw_image(self.pil_image)
     
         
     # -------------------------------------------------------------------------------
@@ -296,11 +313,17 @@ class MainWindow(tk.Frame):
         if self.pil_image == None:
             return
         self.draw_image(self.pil_image)
+        
+        
+    def test_mainwindow(self):
+        print("because of subwindow clicked,this def was called")
     
 
     def new_window(self):
-        self.newWindow = tk.Toplevel(self.master)
+        self.newWindow = tk.Toplevel(master=self)
         self.app = Sub_Window1(self.newWindow)
+        self.newWindow.geometry('300x400+0+0')
+        self.newWindow.protocol('WM_DELETE_WINDOW', (lambda: 'pass')())
         
 
 
@@ -311,13 +334,55 @@ class MainWindow(tk.Frame):
 class Sub_Window1(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
+        self.parent = master
         self.pack()
+        self.create_widgets()
+        
     
     def create_widgets(self):
+        
         print("make widget")
+        
+        botton_nextframe = tk.Button(self,text="next_frame", command=self.test)
+        botton_formerframe = tk.Button(self,text="former_frame", command=self.test)
+        botton_start = tk.Button(self,text="strat", command=self.test)
+        botton_stop = tk.Button(self,text="stop", command=self.test)
+        
+        self.radio_value = tk.IntVar(value = 1)
+        
+        # ラジオボタン
+        radio0 = tk.Radiobutton(self, 
+                           text = "viewmode",      # ラジオボタンの表示名
+                           command = self.radio_click,  # クリックされたときに呼ばれるメソッド
+                           variable = self.radio_value, # 選択の状態を設定する
+                           value = 0                    # ラジオボタンに割り付ける値の設定
+                           )
 
-    def quit_window(self):
-        self.master.destroy()
+        radio1 = tk.Radiobutton(self, 
+                           text = "trackingmode",      # ラジオボタンの表示名
+                           command = self.radio_click,  # クリックされたときに呼ばれるメソッド
+                           variable = self.radio_value, # 選択の状態を設定する
+                           value = 1                    # ラジオボタンに割り付ける値の設定
+                           )
+        botton_nextframe.pack()
+        botton_formerframe.pack()
+        botton_start.pack()
+        botton_stop.pack()
+        radio0.pack()
+        radio1.pack()
+    
+    def test(self):
+        print("botton_clicked")
+        
+    
+    def radio_click(self):
+        # ラジオボタンの値を取得
+        value = self.radio_value.get()
+        print(f"ラジオボタンの値は {value} です")
+
+        
+    
+    
         
 def main():
     root = tk.Tk()
