@@ -165,33 +165,124 @@ class MainWindow(tk.Frame):
         # PillowからNumPy(OpenCVの画像)へ変換
         self.cv_image = self.video.read_frame()
         self.pil_image = Image.fromarray(self.cv_image)
+        self.master.geometry('{}x{}'.format(self.pil_image.width,self.pil_image.height))
+        self.canvas.pack(expand=True,  fill=tk.BOTH)
         #cv2.imshow("test",self.cv_image)
 
+        # 画像全体に表示するようにアフィン変換行列を設定
+        self.zoom_fit(self.pil_image.width, self.pil_image.height)
+        
         # 画像の表示
         self.draw_image(self.pil_image)
-
+        
         # ウィンドウタイトルのファイル名を設定
         self.master.title(self.my_title + " - " + os.path.basename(filename))
+        # ステータスバーに画像情報を表示する
+        #self.image_info["text"] = f"{self.pil_image.format} : {self.pil_image.width} x {self.pil_image.height} {self.pil_image.mode}"
         # カレントディレクトリの設定
         os.chdir(os.path.dirname(filename))
+    
         
+    # -------------------------------------------------------------------------------
+    # 画像表示用アフィン変換
+    # -------------------------------------------------------------------------------
+
+    def reset_transform(self):
+        '''アフィン変換を初期化（スケール１、移動なし）に戻す'''
+        self.mat_affine = np.eye(3) # 3x3の単位行列
+
+    def translate(self, offset_x, offset_y):
+        ''' 平行移動 '''
+        mat = np.eye(3) # 3x3の単位行列
+        mat[0, 2] = float(offset_x)
+        mat[1, 2] = float(offset_y)
+
+        self.mat_affine = np.dot(mat, self.mat_affine)
+
+    def scale(self, scale:float):
+        ''' 拡大縮小 '''
+        mat = np.eye(3) # 単位行列
+        mat[0, 0] = scale
+        mat[1, 1] = scale
+
+        self.mat_affine = np.dot(mat, self.mat_affine)
+
+    def scale_at(self, scale:float, cx:float, cy:float):
+        ''' 座標(cx, cy)を中心に拡大縮小 '''
+
+        # 原点へ移動
+        self.translate(-cx, -cy)
+        # 拡大縮小
+        self.scale(scale)
+        # 元に戻す
+        self.translate(cx, cy)
+
+    def zoom_fit(self, image_width, image_height):
+        '''画像をウィジェット全体に表示させる'''
+
+        # キャンバスのサイズ
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+
+        if (image_width * image_height <= 0) or (canvas_width * canvas_height <= 0):
+            return
+
+        # アフィン変換の初期化
+        self.reset_transform()
+
+        scale = 1.0
+        offsetx = 0.0
+        offsety = 0.0
+
+        if (canvas_width * image_height) > (image_width * canvas_height):
+            # ウィジェットが横長（画像を縦に合わせる）
+            scale = canvas_height / image_height
+            # あまり部分の半分を中央に寄せる
+            offsetx = (canvas_width - image_width * scale) / 2
+        else:
+            # ウィジェットが縦長（画像を横に合わせる）
+            scale = canvas_width / image_width
+            # あまり部分の半分を中央に寄せる
+            offsety = (canvas_height - image_height * scale) / 2
+
+        # 拡大縮小
+        self.scale(scale)
+        # あまり部分を中央に寄せる
+        self.translate(offsetx, offsety)
+        
+
     # -------------------------------------------------------------------------------
     # 描画
     # -------------------------------------------------------------------------------
 
     def draw_image(self, pil_image):
         
-        #if pil_image == None:
-            #return
+        if pil_image == None:
+            return
         
         self.canvas.delete("all")
 
         # キャンバスのサイズ
-        #canvas_width = self.canvas.winfo_width()
-        #canvas_height = self.canvas.winfo_height()
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+        
+        
+        # キャンバスから画像データへのアフィン変換行列を求める
+        #（表示用アフィン変換行列の逆行列を求める）
+        mat_inv = np.linalg.inv(self.mat_affine)
+        
+        # PILの画像データをアフィン変換する
+        dst = pil_image.transform(
+                    (canvas_width, canvas_height),  # 出力サイズ
+                    Image.AFFINE,                   # アフィン変換
+                    tuple(mat_inv.flatten()),       # アフィン変換行列（出力→入力への変換行列）を一次元のタプルへ変換
+                    Image.NEAREST,                  # 補間方法、ニアレストネイバー 
+                    fillcolor= self.back_color
+                    )
+        
         
         # 表示用画像を保持
-        self.image = ImageTk.PhotoImage(image=pil_image)
+        self.image = ImageTk.PhotoImage(image=dst)
 
         # 画像の描画
         self.canvas.create_image(
