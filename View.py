@@ -89,6 +89,7 @@ class MainWindow(tk.Frame):
         # Canvas
         self.canvas = tk.Canvas(self.master, background= self.back_color)
         self.canvas.pack(expand=True,  fill=tk.BOTH)  # この両方でDock.Fillと同じ
+        
 
         # マウスイベント
         self.master.bind("<Motion>", self.mouse_move)                       # MouseMove
@@ -314,51 +315,50 @@ class MainWindow(tk.Frame):
             return
         self.draw_image(self.pil_image)
         
-        
-    def test_mainwindow(self):
-        print("because of subwindow clicked,this def was called")
     
 
     def new_window(self):
         self.newWindow = tk.Toplevel(master=self)
-        self.app = Sub_Window1(self.newWindow)
+        self.app = Sub_Window1(self.newWindow,self)
         self.newWindow.geometry('300x400+0+0')
         self.newWindow.protocol('WM_DELETE_WINDOW', (lambda: 'pass')())
-        
 
+        
+        
 
 
 
 
 
 class Sub_Window1(tk.Frame):
-    def __init__(self, master):
+    def __init__(self, master,parents):
         super().__init__(master)
-        self.parent = master
+        self.parents = parents
         self.pack()
         self.create_widgets()
+        
         
     
     def create_widgets(self):
         
         print("make widget")
         
-        botton_nextframe = tk.Button(self,text="next_frame", command=self.test)
-        botton_formerframe = tk.Button(self,text="former_frame", command=self.test)
-        botton_start = tk.Button(self,text="strat", command=self.test)
-        botton_stop = tk.Button(self,text="stop", command=self.test)
+        botton_nextframe = tk.Button(self.master,text="next_frame", command=self.test)
+        botton_formerframe = tk.Button(self.master,text="former_frame", command=self.test)
+        botton_start = tk.Button(self.master,text="strat", command=self.play_video)
+        botton_stop = tk.Button(self.master,text="stop", command=self.test)
         
-        self.radio_value = tk.IntVar(value = 1)
+        self.radio_value = tk.IntVar(value = 0)
         
         # ラジオボタン
-        radio0 = tk.Radiobutton(self, 
+        radio0 = tk.Radiobutton(self.master, 
                            text = "viewmode",      # ラジオボタンの表示名
                            command = self.radio_click,  # クリックされたときに呼ばれるメソッド
                            variable = self.radio_value, # 選択の状態を設定する
                            value = 0                    # ラジオボタンに割り付ける値の設定
                            )
 
-        radio1 = tk.Radiobutton(self, 
+        radio1 = tk.Radiobutton(self.master, 
                            text = "trackingmode",      # ラジオボタンの表示名
                            command = self.radio_click,  # クリックされたときに呼ばれるメソッド
                            variable = self.radio_value, # 選択の状態を設定する
@@ -373,6 +373,15 @@ class Sub_Window1(tk.Frame):
     
     def test(self):
         print("botton_clicked")
+        self.parents.next_frame()
+        
+        
+    def play_video(self):
+        # 定期的に実行したい処理を記述
+        self.parents.next_frame()
+        # 再度afterを実行
+        # appはメインウィンドウのインスタンス
+        self.parents.after(1000,self.play_video())
         
     
     def radio_click(self):
