@@ -13,6 +13,8 @@ class Video:
     
     def read_frame(self):
         (self.ret,self.frame) = self.cap.read()
+        if self.ret == False:
+            return self.ret
         self.frame = cv2.cvtColor(self.frame,cv2.COLOR_BGR2GRAY)
         #cv2.imshow("test",self.frame)
         return self.frame

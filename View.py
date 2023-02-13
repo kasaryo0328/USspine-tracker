@@ -5,6 +5,9 @@ from PIL import Image,ImageTk
 import Video
 import cv2
 import numpy as np
+import sys
+
+ 
 
 
 
@@ -164,6 +167,8 @@ class MainWindow(tk.Frame):
         # 画像ファイルの再読込用に保持
         self.filename = filename
         self.video = Video.Video(self.filename)
+        
+        sys.setrecursionlimit(self.video.framenum + 100)
 
         # PillowからNumPy(OpenCVの画像)へ変換
         self.cv_image = self.video.read_frame()
@@ -188,7 +193,10 @@ class MainWindow(tk.Frame):
     def next_frame(self):
 
         # PillowからNumPy(OpenCVの画像)へ変換
+        
         self.cv_image = self.video.read_frame()
+        if type(self.cv_image) is not np.ndarray:
+            return
         self.pil_image = Image.fromarray(self.cv_image)
         self.master.geometry('{}x{}'.format(self.pil_image.width,self.pil_image.height))
         self.canvas.pack(expand=True,  fill=tk.BOTH)
@@ -377,10 +385,11 @@ class Sub_Window1(tk.Frame):
         
         
     def play_video(self):
-        # 定期的に実行したい処理を記述
-        self.parents.next_frame()
-        # 再度afterを実行
-        # appはメインウィンドウのインスタンス
+        
+        if type(self.parents.cv_image) is not np.ndarray:
+            print("ret be false")
+            return
+        print(self.parents.cv_image)
         self.parents.after(1000,self.play_video())
         
     
