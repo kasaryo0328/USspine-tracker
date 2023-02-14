@@ -17,5 +17,5 @@ class Video:
             return self.ret
         self.frame = cv2.cvtColor(self.frame,cv2.COLOR_BGR2GRAY)
         #cv2.imshow("test",self.frame)
-        return self.frame
+        return self.ret, self.frame
     

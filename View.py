@@ -18,7 +18,7 @@ class MainWindow(tk.Frame):
         self.pack()
         self.my_title = "USspine-tracker"  # タイトル
         self.back_color = "#FFFFFF"     # 背景色
-        
+
         # ウィンドウの設定
         self.master.title(self.my_title)    # タイトル
         self.master.geometry("600x400")     # サイズ
@@ -158,6 +158,10 @@ class MainWindow(tk.Frame):
             self.scale_at(1.25, event.x, event.y)
         
         self.redraw_image() # 再描画
+        
+    # -------------------------------------------------------------------------------
+    # フレーム制御
+    # -------------------------------------------------------------------------------
     
     def set_video(self, filename):
         ''' 画像ファイルを開く '''
@@ -171,7 +175,7 @@ class MainWindow(tk.Frame):
         sys.setrecursionlimit(self.video.framenum + 100)
 
         # PillowからNumPy(OpenCVの画像)へ変換
-        self.cv_image = self.video.read_frame()
+        self.ret,self.cv_image = self.video.read_frame()
         self.pil_image = Image.fromarray(self.cv_image)
         self.master.geometry('{}x{}'.format(self.pil_image.width,self.pil_image.height))
         self.canvas.pack(expand=True,  fill=tk.BOTH)
@@ -190,13 +194,16 @@ class MainWindow(tk.Frame):
         # カレントディレクトリの設定
         os.chdir(os.path.dirname(filename))
         
-    def next_frame(self):
-
-        # PillowからNumPy(OpenCVの画像)へ変換
+        self.playing = True
         
-        self.cv_image = self.video.read_frame()
-        if type(self.cv_image) is not np.ndarray:
-            return
+        
+    def next_frame(self):
+        # PillowからNumPy(OpenCVの画像)へ変換
+        self.ret,self.cv_image = self.video.read_frame()
+        
+        if self.ret is False:
+            return False
+        
         self.pil_image = Image.fromarray(self.cv_image)
         self.master.geometry('{}x{}'.format(self.pil_image.width,self.pil_image.height))
         self.canvas.pack(expand=True,  fill=tk.BOTH)
@@ -204,11 +211,36 @@ class MainWindow(tk.Frame):
 
         # 画像全体に表示するようにアフィン変換行列を設定
         self.zoom_fit(self.pil_image.width, self.pil_image.height)
-        
         # 画像の表示
         self.draw_image(self.pil_image)
-    
         
+        return True
+        
+    def play_video(self):
+        self.app.delete_play_button()
+        #self.app.change_botton_text_stop()
+        self.after(int(1000/self.video.fps),self.play_video)
+        
+        if self.playing:
+            # 動画を１フレーム進める
+            ret = self.next_frame()
+
+            # フレームが進められない場合
+            if not ret:
+                return False
+        
+    def stop_video(self):
+        if not self.playing:
+            self.app.change_botton_text_stop()
+            self.playing = True
+            
+
+        else:
+            self.app.change_botton_text_start()
+            self.playing = False
+            
+            
+
     # -------------------------------------------------------------------------------
     # 画像表示用アフィン変換
     # -------------------------------------------------------------------------------
@@ -351,46 +383,55 @@ class Sub_Window1(tk.Frame):
         
         print("make widget")
         
-        botton_nextframe = tk.Button(self.master,text="next_frame", command=self.test)
-        botton_formerframe = tk.Button(self.master,text="former_frame", command=self.test)
-        botton_start = tk.Button(self.master,text="strat", command=self.play_video)
-        botton_stop = tk.Button(self.master,text="stop", command=self.test)
+        self.botton_nextframe = tk.Button(self.master,text="next_frame", command=self.next_frame)
+        self.botton_formerframe = tk.Button(self.master,text="former_frame", command=self.next_frame)
+        self.botton_start = tk.Button(self.master,text="strat", command=self.play_video)
+        self.botton_stop = tk.Button(self.master,text="stop", command=self.stop_video)
+        self.botton_restart = tk.Button(self.master,text="restart_from_firstframe", command=self.stop_video)
         
         self.radio_value = tk.IntVar(value = 0)
         
         # ラジオボタン
-        radio0 = tk.Radiobutton(self.master, 
+        self.radio0 = tk.Radiobutton(self.master, 
                            text = "viewmode",      # ラジオボタンの表示名
                            command = self.radio_click,  # クリックされたときに呼ばれるメソッド
                            variable = self.radio_value, # 選択の状態を設定する
                            value = 0                    # ラジオボタンに割り付ける値の設定
                            )
 
-        radio1 = tk.Radiobutton(self.master, 
+        self.radio1 = tk.Radiobutton(self.master, 
                            text = "trackingmode",      # ラジオボタンの表示名
                            command = self.radio_click,  # クリックされたときに呼ばれるメソッド
                            variable = self.radio_value, # 選択の状態を設定する
                            value = 1                    # ラジオボタンに割り付ける値の設定
                            )
-        botton_nextframe.pack()
-        botton_formerframe.pack()
-        botton_start.pack()
-        botton_stop.pack()
-        radio0.pack()
-        radio1.pack()
-    
-    def test(self):
-        print("botton_clicked")
+        self.botton_nextframe.pack()
+        self.botton_formerframe.pack()
+        self.botton_start.pack()
+        self.botton_stop.pack()
+        self.radio0.pack()
+        self.radio1.pack()
+        
+    def next_frame(self):
         self.parents.next_frame()
         
-        
     def play_video(self):
+        self.parents.play_video()
         
-        if type(self.parents.cv_image) is not np.ndarray:
-            print("ret be false")
-            return
-        print(self.parents.cv_image)
-        self.parents.after(1000,self.play_video())
+    def stop_video(self):
+        self.parents.stop_video()
+        
+    def change_botton_text_stop(self):
+        self.botton_stop.configure(text = "stop")
+    
+    def change_botton_text_start(self):
+        self.botton_stop.configure(text = "start")
+        self.botton_restart.pack()
+        
+    def delete_play_button(self):
+        self.botton_start.pack_forget()
+        
+        
         
     
     def radio_click(self):
